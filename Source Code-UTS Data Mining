@@ -1,0 +1,66 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+
+df = pd.read_csv("caffeine_intake_tracker.csv")  
+
+print("Kolom dataset:\n", df.columns)
+print("\nJumlah data:", df.shape)
+print("\nCek missing values:\n", df.isnull().sum())
+
+selected = [
+    'age', 'focus_level', 'sleep_quality', 'sleep_impacted',
+    'beverage_coffee', 'beverage_energy_drink', 'beverage_tea',
+    'time_of_day_afternoon', 'time_of_day_evening', 'time_of_day_morning',
+    'gender_female', 'gender_male', 'caffeine_mg'
+]
+
+data = df[selected].dropna()
+
+X = data.drop('caffeine_mg', axis=1)
+y = data['caffeine_mg']
+
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=42)
+
+model = LinearRegression()
+model.fit(X_train, y_train)
+y_pred = model.predict(X_test)
+
+
+mae = mean_absolute_error(y_test, y_pred)
+rmse = np.sqrt(mean_squared_error(y_test, y_pred))
+r2 = r2_score(y_test, y_pred)
+
+print("\n===== HASIL EVALUASI MODEL =====")
+print(f"Mean Absolute Error (MAE): {mae:.3f}")
+print(f"Root Mean Square Error (RMSE): {rmse:.3f}")
+print(f"R² Score: {r2:.3f}")
+
+coef_df = pd.DataFrame({
+    'Fitur': X.columns,
+    'Koefisien': model.coef_.round(3)
+}).sort_values(by='Koefisien', ascending=False)
+
+print("\nKoefisien regresi tiap fitur:")
+print(coef_df)
+
+
+plt.figure(figsize=(10,6))
+sns.barplot(x='Koefisien', y='Fitur', data=coef_df, palette='coolwarm')
+plt.title("Pengaruh Setiap Fitur terhadap Konsumsi Kafein (mg)")
+plt.xlabel("Koefisien Regresi")
+plt.ylabel("Fitur")
+plt.show()
+
+plt.figure(figsize=(6,6))
+plt.scatter(y_test, y_pred, alpha=0.6)
+plt.plot([y.min(), y.max()], [y.min(), y.max()], 'r--')
+plt.xlabel("Nilai Aktual (mg)")
+plt.ylabel("Prediksi (mg)")
+plt.title("Prediksi vs Aktual Konsumsi Kafein")
+plt.show()
