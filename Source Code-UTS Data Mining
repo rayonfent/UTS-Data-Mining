@@ -1,3 +1,7 @@
+# PROYEK DATA MINING
+# Prediksi Jumlah Konsumsi Kafein Harian Berdasarkan Aktivitas dan Kondisi Harian
+
+# === Import Library ===
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -6,12 +10,27 @@ from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
-df = pd.read_csv("caffeine_intake_tracker.csv")  
+# === Load Dataset ===
+df = pd.read_csv("caffeine_intake_tracker.csv")
 
-print("Kolom dataset:\n", df.columns)
-print("\nJumlah data:", df.shape)
+print("=== INFORMASI DATASET ===")
+print("Jumlah data:", df.shape)
+print("\nKolom dataset:\n", list(df.columns))
 print("\nCek missing values:\n", df.isnull().sum())
 
+# === Data Understanding ===
+print("\n=== STATISTIK DESKRIPTIF ===")
+print(df.describe())
+
+# Visualisasi distribusi target
+plt.figure(figsize=(7,4))
+sns.histplot(df["caffeine_mg"], bins=30, kde=True, color='orange')
+plt.title("Distribusi Konsumsi Kafein (mg)")
+plt.xlabel("Kafein (mg)")
+plt.ylabel("Frekuensi")
+plt.show()
+
+# === Data Preparation ===
 selected = [
     'age', 'focus_level', 'sleep_quality', 'sleep_impacted',
     'beverage_coffee', 'beverage_energy_drink', 'beverage_tea',
@@ -24,14 +43,28 @@ data = df[selected].dropna()
 X = data.drop('caffeine_mg', axis=1)
 y = data['caffeine_mg']
 
+# Korelasi antar variabel
+plt.figure(figsize=(10,8))
+sns.heatmap(data.corr(), annot=True, cmap='coolwarm', fmt=".2f")
+plt.title("Korelasi Antar Variabel")
+plt.show()
 
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=42)
+# === Split Data ===
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.25, random_state=42
+)
 
+print("\nJumlah data latih:", X_train.shape[0])
+print("Jumlah data uji   :", X_test.shape[0])
+
+# === Modeling ===
 model = LinearRegression()
 model.fit(X_train, y_train)
+
+# Prediksi
 y_pred = model.predict(X_test)
 
-
+# === Evaluasi Model ===
 mae = mean_absolute_error(y_test, y_pred)
 rmse = np.sqrt(mean_squared_error(y_test, y_pred))
 r2 = r2_score(y_test, y_pred)
@@ -41,26 +74,57 @@ print(f"Mean Absolute Error (MAE): {mae:.3f}")
 print(f"Root Mean Square Error (RMSE): {rmse:.3f}")
 print(f"R² Score: {r2:.3f}")
 
+# Tabel koefisien fitur
 coef_df = pd.DataFrame({
     'Fitur': X.columns,
     'Koefisien': model.coef_.round(3)
 }).sort_values(by='Koefisien', ascending=False)
 
-print("\nKoefisien regresi tiap fitur:")
+print("\n=== KOEFISIEN REGRESI ===")
 print(coef_df)
 
-
+# === Visualisasi Koefisien ===
 plt.figure(figsize=(10,6))
 sns.barplot(x='Koefisien', y='Fitur', data=coef_df, palette='coolwarm')
 plt.title("Pengaruh Setiap Fitur terhadap Konsumsi Kafein (mg)")
 plt.xlabel("Koefisien Regresi")
 plt.ylabel("Fitur")
+plt.tight_layout()
 plt.show()
 
+# === Visualisasi Prediksi vs Aktual ===
 plt.figure(figsize=(6,6))
-plt.scatter(y_test, y_pred, alpha=0.6)
+sns.scatterplot(x=y_test, y=y_pred, alpha=0.6)
 plt.plot([y.min(), y.max()], [y.min(), y.max()], 'r--')
 plt.xlabel("Nilai Aktual (mg)")
 plt.ylabel("Prediksi (mg)")
 plt.title("Prediksi vs Aktual Konsumsi Kafein")
+plt.tight_layout()
 plt.show()
+
+# === Analisis Error ===
+errors = y_test - y_pred
+plt.figure(figsize=(7,4))
+sns.histplot(errors, bins=30, kde=True, color='skyblue')
+plt.title("Distribusi Error Prediksi")
+plt.xlabel("Error (mg)")
+plt.ylabel("Frekuensi")
+plt.tight_layout()
+plt.show()
+
+# === Ringkasan Interpretasi ===
+print("\n=== INTERPRETASI SINGKAT ===")
+top_positive = coef_df.head(3)
+top_negative = coef_df.tail(3)
+print("Fitur dengan pengaruh positif terbesar:\n", top_positive)
+print("\nFitur dengan pengaruh negatif terbesar:\n", top_negative)
+
+print(f"""
+Interpretasi:
+- Model memiliki tingkat keakuratan yang cukup baik (R² = {r2:.2f}), 
+  artinya sekitar {r2*100:.1f}% variasi konsumsi kafein dapat dijelaskan oleh fitur yang digunakan.
+- Fitur dengan koefisien positif menandakan peningkatan konsumsi kafein, 
+  sedangkan koefisien negatif menunjukkan penurunan konsumsi.
+- Disarankan untuk mencoba model non-linear seperti Random Forest atau Gradient Boosting
+  untuk melihat apakah akurasi dapat meningkat lebih lanjut.
+""")
